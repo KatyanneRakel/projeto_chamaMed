@@ -1,7 +1,7 @@
 package chamamed.uniesp.Controller;
 
 import chamamed.uniesp.Entity.PacienteEntity;
-import chamamed.uniesp.Repository.PacienteRepository;
+import chamamed.uniesp.Service.PacienteService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,11 +16,12 @@ import java.util.List;
 public class PacienteController {
 
     //Usado para salvar, buscar e apagar pacientes no banco
-    private final PacienteRepository repository;
+
+    private final PacienteService pacienteService;
 
     //O Spring entrega o repository pronto aqui (injeção de dependência), não precisa dar new
-    public PacienteController(PacienteRepository repository) {
-        this.repository = repository;
+    public PacienteController(PacienteService service) {
+        this.pacienteService = service;
     }
 
     //CREATE: responde ao POST /pacientes e cadastra um novo paciente
@@ -29,14 +30,13 @@ public class PacienteController {
     //Devolve o paciente salvo (já com o id) e o status 201 (Created)
     @PostMapping
     public ResponseEntity<PacienteEntity> criar(@Valid @RequestBody PacienteEntity paciente) {
-        PacienteEntity salvo = repository.save(paciente);
-        return ResponseEntity.status(HttpStatus.CREATED).body(salvo);
+        return ResponseEntity.status(HttpStatus.CREATED).body(pacienteService.criarPaciente(paciente));
     }
 
     //READ: responde ao GET /pacientes e devolve a lista de todos os pacientes
     @GetMapping
     public List<PacienteEntity> listar() {
-        return repository.findAll();
+        return pacienteService.listarPaciente();
     }
 
     //READ: responde ao GET /pacientes/1 e devolve só o paciente com aquele id
@@ -44,7 +44,7 @@ public class PacienteController {
     //Se existir devolve 200 (OK), se não existir devolve 404 (Not Found)
     @GetMapping("/{id}")
     public ResponseEntity<PacienteEntity> buscar(@PathVariable Long id) {
-        return repository.findById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+        return pacienteService.buscarPacientePorId(id);
     }
 
     //UPDATE: responde ao PUT /pacientes/1 e altera os dados do paciente com aquele id
@@ -52,23 +52,13 @@ public class PacienteController {
     //Se o id não existir devolve 404, não cria um paciente novo
     @PutMapping("/{id}")
     public ResponseEntity<PacienteEntity> atualizar(@PathVariable Long id, @Valid @RequestBody PacienteEntity dados) {
-        return repository.findById(id).map(paciente -> {
-                    paciente.setNome(dados.getNome());
-                    paciente.setCpf(dados.getCpf());
-                    paciente.setDataNasc(dados.getDataNasc());
-                    paciente.setTelefone(dados.getTelefone());
-                    return ResponseEntity.ok(repository.save(paciente));
-                }).orElse(ResponseEntity.notFound().build());
+        return pacienteService.atualizarPaciente(id, dados);
     }
 
     //DELETE: responde ao DELETE /pacientes/1 e apaga o paciente com aquele id
     //Se o id não existir devolve 404, se apagar devolve 204 (No Content, deu certo e não tem nada para mostrar)
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletar(@PathVariable Long id) {
-        if (!repository.existsById(id)) {
-            return ResponseEntity.notFound().build();
+        @DeleteMapping("/{id}")
+        public ResponseEntity<Void> deletar(@PathVariable Long id) {
+            return pacienteService.deletarPaciente(id);
         }
-        repository.deleteById(id);
-        return ResponseEntity.noContent().build();
-    }
 }
